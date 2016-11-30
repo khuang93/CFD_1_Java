@@ -6,8 +6,13 @@
 package cfd_1_java;
 
 import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.PrintStream;
 import java.util.ArrayList;
 import java.util.Scanner;
+import java.math.*;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
  *
@@ -61,55 +66,85 @@ public class CFD_1_Java {
             Cell thisCell;
             CellNode next;
             CellNode prev;
-            
-            CellNode(int numCells){
-                this.thisCell=new Cell(numCells);
+
+            CellNode(int numCells) {
+                this.thisCell = new Cell(numCells);
             }
 
         }
-
-        CellNode cellT0 = new CellNode(numberCells);
+        
+        int initNumberCells=numberCells+1;
+        
+        CellNode cellT0 = new CellNode(initNumberCells);
         CellNode cellCurrentT;
-        CellNode cellLastT=new CellNode(numberCells);
+        CellNode cellLastT = new CellNode(initNumberCells);
         cellT0.prev = null;
         cellCurrentT = cellT0;
-        cellCurrentT.thisCell.Tf = new double[numberCells];
-            cellCurrentT.thisCell.Ts = new double[numberCells];
-        for (int i = 0; i < total_timesteps; i++) {
-            cellCurrentT.thisCell.Tf = new double[numberCells];
-            cellCurrentT.thisCell.Ts = new double[numberCells];
+        cellCurrentT.thisCell.Tf = new double[initNumberCells];
+        cellCurrentT.thisCell.Ts = new double[initNumberCells];
+        
+        int num = 2;
+        double k = 2*Math.PI*num/height;
+        
+        for (int i = 0; i < total_timesteps+1; i++) {
+            cellCurrentT.thisCell.Tf = new double[initNumberCells];
+            cellCurrentT.thisCell.Ts = new double[initNumberCells];
             for (int xi = 0; xi < numberCells; xi++) {
-                cellCurrentT.thisCell.Tf[xi] = initTemp;
-                cellCurrentT.thisCell.Ts[xi] = initTemp;
-                System.out.print("i"+i+"xi"+xi+"Tf"+cellCurrentT.thisCell.Tf[xi]+"\n");
-                
+                cellCurrentT.thisCell.Tf[xi] = Math.cos(k*xi);
+                cellCurrentT.thisCell.Ts[xi] = Math.sin(k*xi);
+              //  System.out.print("i" + i + "xi" + xi + "Tf" + cellCurrentT.thisCell.Tf[xi] + "\n");
+
             }
-            cellCurrentT.next=new CellNode(numberCells);
-            cellCurrentT.next.prev=cellCurrentT;
-            cellCurrentT=cellCurrentT.next;
-            
-            if(i==total_timesteps-1){
-                cellLastT=cellCurrentT;
+            cellCurrentT.next = new CellNode(initNumberCells);
+            cellCurrentT.next.prev = cellCurrentT;
+            cellCurrentT = cellCurrentT.next;
+
+            if (i == total_timesteps - 1) {
+                cellLastT = cellCurrentT;
             }
 
         }
-        cellLastT.next=null;
-        cellCurrentT=cellT0.next;
-        int ii = 0;
-        while(cellCurrentT.next!=null &&cellCurrentT.prev!=null){
-            System.out.println(ii+"numberCells"+numberCells);
-            for(int n = 1; n<numberCells-1;n++){
-                cellCurrentT.thisCell.Tf[n+1]= cellCurrentT.thisCell.Tf[n];
-                
-                System.out.print("n"+n+"Tf"+cellCurrentT.thisCell.Tf[n]+"\n");
-                
-                
+        
+        try {
+            PrintStream fout = new PrintStream(new File("plot_data_pr3_t0_java.csv"));
+            fout.println("x, Ts, Tf");
+            for (int n = 0; n < numberCells; n++) {
+                fout.println(n * deltaX + "," + cellCurrentT.prev.thisCell.Ts[n] + "," + cellCurrentT.prev.thisCell.Tf[n]);
             }
-            cellCurrentT=cellCurrentT.next;
-            ii++;
+        } catch (FileNotFoundException ex) {
+            Logger.getLogger(CFD_1_Java.class.getName()).log(Level.SEVERE, null, ex);
         }
         
-        
+        cellLastT.next = null;
+        cellCurrentT = cellT0.next;
+        int ii = 0;
+
+        while (cellCurrentT.next != null && cellCurrentT.prev != null) {
+            
+            for (int n = 1; n < numberCells; n++) {
+                cellCurrentT.thisCell.Tf[n + 1] = cellCurrentT.thisCell.Tf[n]
+                        - uf * delta_t / deltaX * (cellCurrentT.thisCell.Tf[n] - cellCurrentT.prev.thisCell.Tf[n])
+                        + alpha_f * delta_t / (deltaX * deltaX)
+                        * (cellCurrentT.next.thisCell.Tf[n] - 2 * cellCurrentT.thisCell.Tf[n] + cellCurrentT.prev.thisCell.Tf[n]);
+
+                //System.out.print("n" + n + "Tf" + cellCurrentT.thisCell.Tf[n] + "\n");
+                
+                cellCurrentT.thisCell.Ts[n+1]=cellCurrentT.thisCell.Ts[n]+alpha_s*delta_t/(deltaX*deltaX)
+                        *(cellCurrentT.next.thisCell.Ts[n] - 2 * cellCurrentT.thisCell.Ts[n] + cellCurrentT.prev.thisCell.Ts[n]);
+
+            }
+            cellCurrentT = cellCurrentT.next;
+            ii++;
+        }
+        try {
+            PrintStream fout = new PrintStream(new File("plot_data_pr3_java.csv"));
+            fout.println("x, Ts, Tf");
+            for (int n = 0; n < numberCells; n++) {
+                fout.println(n * deltaX + "," + cellCurrentT.prev.thisCell.Ts[n] + "," + cellCurrentT.prev.thisCell.Tf[n]);
+            }
+        } catch (FileNotFoundException ex) {
+            Logger.getLogger(CFD_1_Java.class.getName()).log(Level.SEVERE, null, ex);
+        }
 
     }
 
