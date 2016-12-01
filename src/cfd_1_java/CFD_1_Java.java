@@ -25,11 +25,21 @@ public class CFD_1_Java {
      */
     public static void main(String[] args) {
         // TODO code application logic here
+         double height, diameter, initTemp;
+        final int numberCells;
+        Scanner sc = new Scanner(System.in);
+        height = sc.nextDouble();
+        diameter = sc.nextDouble();
+        numberCells = sc.nextInt();
+        initTemp = sc.nextDouble();
+
+        double deltaX = height / numberCells;
+        
         double alpha_f = 2E-7;
         double alpha_s = 9E-7;
         double uf = 0.1;
         double Tf_in = 773;
-        double hv=1000;
+        
         double epsilon = 0.4;
         double rho_f=1835.6;
         double rho_s = 2600;
@@ -39,19 +49,13 @@ public class CFD_1_Java {
         double kf=0.52;
         double m_f_dot = 0.1;
         double mu_f=2.63;
+        double ds=0.03;
         
+        double hv=1000;
         double hv_f = hv/(epsilon*rho_f*Cp_f);
         double hv_s = hv/((1-epsilon)*rho_s*Cs);
 
-        double height, diameter, initTemp;
-        final int numberCells;
-        Scanner sc = new Scanner(System.in);
-        height = sc.nextDouble();
-        diameter = sc.nextDouble();
-        numberCells = sc.nextInt();
-        initTemp = sc.nextDouble();
-
-        double deltaX = height / numberCells;
+       
 
         File file1 = new File("plot_data_pr1_JAVA.csv");
 
