@@ -1,7 +1,7 @@
 clear all;
 close all
 clc;
-M=csvread('plot_data_pr3_t5000java.csv',1,0);
+M=csvread('plot_data_pr3_final_java.csv',1,0);
 sizeM=size(M);
 numRows=sizeM(1);
 numCols=sizeM(2);

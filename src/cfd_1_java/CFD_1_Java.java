@@ -29,8 +29,19 @@ public class CFD_1_Java {
         double alpha_s = 9E-7;
         double uf = 0.1;
         double Tf_in = 773;
-        double hv_f = 0.0003;
-        double hv_s = 0.0001;
+        double hv=1000;
+        double epsilon = 0.4;
+        double rho_f=1835.6;
+        double rho_s = 2600;
+        double Cp_f=1511.8;
+        double Cs=900;
+        double ks = 2;
+        double kf=0.52;
+        double m_f_dot = 0.1;
+        double mu_f=2.63;
+        
+        double hv_f = hv/(epsilon*rho_f*Cp_f);
+        double hv_s = hv/((1-epsilon)*rho_s*Cs);
 
         double height, diameter, initTemp;
         final int numberCells;
@@ -53,7 +64,7 @@ public class CFD_1_Java {
         t_states.add(t_idle_C_Dis);
         t_states.add(t_discharging);
         t_states.add(t_idle_Dis_C);
-        int numberCycles = 1;
+        int numberCycles = 10;
         int timeStepsPerCycle = 1;
         for (double t : t_states) {
             timeStepsPerCycle += t;
