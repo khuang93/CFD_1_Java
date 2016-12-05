@@ -21,5 +21,5 @@ public class TimeStepNode {
             TimeStepNode(int numCells) {
                 this.thisTS = new TimeStep(numCells);
             }
-    
+               
 }
