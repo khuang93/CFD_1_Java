@@ -154,24 +154,17 @@ public class CFD_1_Java {
             int status = getCurrentState(t_states, currentTimeStep * delta_t);
 //                foutT.print(currentTimeStep * delta_t + "," + status + "\n");
             currentTimeStepNode.next = new TimeStepNode(initNumberCells);
+            currentTimeStepNode.next.next = null;
+            currentTimeStepNode.next.prev = currentTimeStepNode;
             currentTimeStepNode.next.thisTS.Tf[0] = Tf_in;
             currentTimeStepNode.next.thisTS.Ts[0] = initTemp;
+            currentTimeStepNode.next.thisTS.Tf_star[0] = initTemp;
+            currentTimeStepNode.next.thisTS.Ts_star[0] = initTemp;
             for (int xi = 1; xi < initNumberCells; xi++) {
                 currentTimeStepNode.next.thisTS.Tf[xi] = initTemp;//Math.cos(k * xi * deltaX);
                 currentTimeStepNode.next.thisTS.Ts[xi] = initTemp;//Math.sin(k * xi * deltaX);
-            }
-
-            if (currentTimeStep % (500 * TS_per_sec) == 0) {
-                try {
-                    PrintStream fout = new PrintStream(new File("plot_data_pr3_t_" + currentTimeStep / TS_per_sec + "_java.csv"));
-                    fout.println("x, Tf, Ts");
-                    for (int n = 0; n < initNumberCells; n++) {
-                        fout.println(n * deltaX + "," + currentTimeStepNode.thisTS.Tf[n] + "," + currentTimeStepNode.thisTS.Ts[n]);
-                    }
-                } catch (FileNotFoundException ex) {
-                    Logger.getLogger(CFD_1_Java.class.getName()).log(Level.SEVERE, null, ex);
-                }
-
+                currentTimeStepNode.next.thisTS.Tf_star[xi] = initTemp;
+                currentTimeStepNode.next.thisTS.Ts_star[xi] = initTemp;
             }
 
             //different states
@@ -207,10 +200,12 @@ public class CFD_1_Java {
 
                         // System.out.println("t" + currentTimeStep + "n" + i + "Tfs" + currentTimeStepNode.thisTS.Tf_star[i] + "Tss" + currentTimeStepNode.thisTS.Ts_star[i]);
                         if (i == 1) {
-                            currentTimeStepNode.next.thisTS.Ts[i - 1] = currentTimeStepNode.next.thisTS.Ts[i];
+//                            currentTimeStepNode.thisTS.Tf[i - 1] = currentTimeStepNode.thisTS.Tf[i]+uf * delta_t / deltaX * (currentTimeStepNode.thisTS.Tf[i] - currentTimeStepNode.thisTS.Tf[i+1]);
+//                            currentTimeStepNode.thisTS.Ts[i - 1] = currentTimeStepNode.thisTS.Ts[i]+ uf * delta_t / deltaX * (currentTimeStepNode.thisTS.Ts[i] - currentTimeStepNode.thisTS.Ts[i + 1]);
+//                            currentTimeStepNode.thisTS.Ts_star[i - 1] = currentTimeStepNode.thisTS.Ts_star[i];
+//                            currentTimeStepNode.thisTS.Ts[i - 1] = matrixM_inv[1][0] * currentTimeStepNode.thisTS.Tf_star[i - 1] + matrixM_inv[1][1] * currentTimeStepNode.thisTS.Ts_star[i - 1];
                             //currentTimeStepNode.next.thisTS.Tf[i-1]=currentTimeStepNode.next.thisTS.Tf[i];
                         }
-
                     }
                 }
 
@@ -237,6 +232,20 @@ public class CFD_1_Java {
             } else { //idle
                 currentTimeStepNode.next.thisTS = currentTimeStepNode.thisTS;
             }
+
+            if (currentTimeStep % (500 * TS_per_sec) == 0 || currentTimeStep < 10) {
+                try {
+                    PrintStream fout = new PrintStream(new File("plot_data_pr3_t_" + currentTimeStep * 1.0 / TS_per_sec + "_java.csv"));
+                    fout.println("x, Tf, Ts , Tf* , Ts*");
+                    for (int n = 0; n < initNumberCells; n++) {
+                        fout.println(n * deltaX + "," + currentTimeStepNode.thisTS.Tf[n] + "," + currentTimeStepNode.thisTS.Ts[n] + "," + currentTimeStepNode.thisTS.Tf_star[n] + "," + currentTimeStepNode.thisTS.Ts_star[n]);
+                    }
+                } catch (FileNotFoundException ex) {
+                    Logger.getLogger(CFD_1_Java.class.getName()).log(Level.SEVERE, null, ex);
+                }
+
+            }
+
             currentTimeStepNode = currentTimeStepNode.next;
             currentTimeStepNode.prev = null;
             currentTimeStep++;
