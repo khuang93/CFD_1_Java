@@ -25,7 +25,7 @@ public class CFD_1_Java {
     static final int DISCHARGING = 2;
     static final int IDLE_DIS_C = 3;
 
-    static Double t_charging = 15000.;
+    static Double t_charging = 4000.;
     static Double t_idle_C_Dis = 0.;//2000.;
     static Double t_discharging = 0.;//500.;
     static Double t_idle_Dis_C = 0.;// 1000.;
