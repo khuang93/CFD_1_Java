@@ -40,8 +40,8 @@ public class CFD_1_Java {
     static double hv_f;
     static double hv_s;
 
-    static double alpha_f = 2E-7;
-    static double alpha_s = 9E-7;
+    static double alpha_f = 0;
+    static double alpha_s = 0;
     static double uf = 0;
     static double uf_charging = 0.1;
     static double uf_discharging = -0.1;
@@ -75,7 +75,7 @@ public class CFD_1_Java {
         numberCells = sc.nextInt();
         initTemp = sc.nextDouble();
 
-        double deltaX = height / numberCells;
+        double deltaX = height * 1.0f / numberCells;
 
         updateParameters(CHARGING);
 
@@ -112,39 +112,14 @@ public class CFD_1_Java {
         TimeStepNode currentTimeStepNode;
         TimeStepNode TLast = new TimeStepNode(initNumberCells);
         T0.prev = null;
-////        currentTimeStepNode = T0;
-////        currentTimeStepNode.thisTS.Tf = new double[initNumberCells];
-////        currentTimeStepNode.thisTS.Ts = new double[initNumberCells];
-////
-////        int num = 1;
-////        double k = 2 * Math.PI * num / height;
-////
-////        //initialization of Tf and Ts
-////        for (int ti = 0; ti < total_timesteps + 1; ti++) {
-////            currentTimeStepNode.thisTS.Tf = new double[initNumberCells];
-////            currentTimeStepNode.thisTS.Ts = new double[initNumberCells];
-////            currentTimeStepNode.thisTS.Tf[0] = Tf_in;
-////            currentTimeStepNode.thisTS.Ts[0] = initTemp;
-////            for (int xi = 1; xi < initNumberCells; xi++) {
-////                currentTimeStepNode.thisTS.Tf[xi] = initTemp;//Math.cos(k * xi * deltaX);
-////                currentTimeStepNode.thisTS.Ts[xi] = initTemp;//Math.sin(k * xi * deltaX);
-//////                currentTimeStepNode.thisTS.Tf_star[xi] = 0;//Math.cos(k * xi * deltaX);
-//////                currentTimeStepNode.thisTS.Ts_star[xi] = 0;//Math.sin(k * xi * deltaX);
-////                //  System.out.print("i" + i + "xi" + xi + "Tf" + cellCurrentTime.thisTS.Tf[xi] + "\n");
-////
-////            }
-////            currentTimeStepNode.next = new TimeStepNode(initNumberCells);
-////            currentTimeStepNode.next.prev = currentTimeStepNode;
-////            currentTimeStepNode = currentTimeStepNode.next;
-////
-////            if (ti == total_timesteps - 1) {
-////                TLast = currentTimeStepNode;
-////            }
-////
-////        }
-////
-////        TLast.next = null;
+        
         currentTimeStepNode = T0;//.next;
+        currentTimeStepNode.thisTS.Tf[0] = Tf_in;
+        currentTimeStepNode.thisTS.Ts[0] = initTemp;
+        for (int xi = 1; xi < initNumberCells; xi++) {
+            currentTimeStepNode.thisTS.Tf[xi] = initTemp;//Math.cos(k * xi * deltaX);
+            currentTimeStepNode.thisTS.Ts[xi] = initTemp;//Math.sin(k * xi * deltaX);
+        }
 
 //        double[][] matrixM = new double[2][2];
 //        double[][] matrixM_inv = new double[2][2];
@@ -156,15 +131,17 @@ public class CFD_1_Java {
             currentTimeStepNode.next = new TimeStepNode(initNumberCells);
             currentTimeStepNode.next.next = null;
             currentTimeStepNode.next.prev = currentTimeStepNode;
+
             currentTimeStepNode.next.thisTS.Tf[0] = Tf_in;
-            currentTimeStepNode.next.thisTS.Ts[0] = initTemp;
-            currentTimeStepNode.next.thisTS.Tf_star[0] = initTemp;
-            currentTimeStepNode.next.thisTS.Ts_star[0] = initTemp;
+
+            currentTimeStepNode.next.thisTS.Ts[0] = currentTimeStepNode.thisTS.Ts[1];
+            currentTimeStepNode.next.thisTS.Tf_star[0] = -initTemp;
+            currentTimeStepNode.next.thisTS.Ts_star[0] = -initTemp;
             for (int xi = 1; xi < initNumberCells; xi++) {
                 currentTimeStepNode.next.thisTS.Tf[xi] = initTemp;//Math.cos(k * xi * deltaX);
                 currentTimeStepNode.next.thisTS.Ts[xi] = initTemp;//Math.sin(k * xi * deltaX);
-                currentTimeStepNode.next.thisTS.Tf_star[xi] = initTemp;
-                currentTimeStepNode.next.thisTS.Ts_star[xi] = initTemp;
+                currentTimeStepNode.next.thisTS.Tf_star[xi] = -initTemp;
+                currentTimeStepNode.next.thisTS.Ts_star[xi] = -initTemp;
             }
 
             //different states
@@ -183,7 +160,14 @@ public class CFD_1_Java {
                         * (cellCurrentTime.next.thisTS.Ts[n] - 2 * cellCurrentTime.thisTS.Ts[n] + cellCurrentTime.prev.thisTS.Ts[n]);
                      */
                     if (i == 0) {
-
+//                        currentTimeStepNode.thisTS.Tf_star[i] = currentTimeStepNode.thisTS.Tf[i];
+//                        //System.out.print("n" + n + "Tf" + cellCurrentTime.thisTS.Tf[n] + "\n");
+//                        currentTimeStepNode.thisTS.Ts_star[i] = currentTimeStepNode.thisTS.Ts[i];
+//
+//                        //now use inv matrix to get Tfn+1 and tsn+1
+//                        currentTimeStepNode.next.thisTS.Tf[i] = matrixM_inv[0][0] * currentTimeStepNode.thisTS.Tf_star[i] + matrixM_inv[0][1] * currentTimeStepNode.thisTS.Ts_star[i];
+//
+//                        currentTimeStepNode.next.thisTS.Ts[i] = matrixM_inv[1][0] * currentTimeStepNode.thisTS.Tf_star[i] + matrixM_inv[1][1] * currentTimeStepNode.thisTS.Ts_star[i];
                     } else {
                         currentTimeStepNode.thisTS.Tf_star[i] = currentTimeStepNode.thisTS.Tf[i] - uf * delta_t / deltaX * (currentTimeStepNode.thisTS.Tf[i] - currentTimeStepNode.thisTS.Tf[i - 1])
                                 + alpha_f * delta_t / (deltaX * deltaX)
@@ -194,11 +178,13 @@ public class CFD_1_Java {
                                 * (currentTimeStepNode.thisTS.Ts[i + 1] - 2 * currentTimeStepNode.thisTS.Ts[i] + currentTimeStepNode.thisTS.Ts[i - 1]);
 
                         //now use inv matrix to get Tfn+1 and tsn+1
-                        currentTimeStepNode.next.thisTS.Tf[i] = matrixM_inv[0][0] * currentTimeStepNode.thisTS.Tf_star[i] + matrixM_inv[0][1] * currentTimeStepNode.thisTS.Ts_star[i];
+                        currentTimeStepNode.next.thisTS.Tf[i] = matrixM_inv[0][0] * 1.0 * currentTimeStepNode.thisTS.Tf_star[i] + matrixM_inv[0][1] * 1.0 * currentTimeStepNode.thisTS.Ts_star[i];
 
                         currentTimeStepNode.next.thisTS.Ts[i] = matrixM_inv[1][0] * currentTimeStepNode.thisTS.Tf_star[i] + matrixM_inv[1][1] * currentTimeStepNode.thisTS.Ts_star[i];
 
-                        // System.out.println("t" + currentTimeStep + "n" + i + "Tfs" + currentTimeStepNode.thisTS.Tf_star[i] + "Tss" + currentTimeStepNode.thisTS.Ts_star[i]);
+//                        System.out.println("t" + currentTimeStep + "n" + i + "Tfs " + currentTimeStepNode.thisTS.Tf_star[i] + "Tss " + currentTimeStepNode.thisTS.Ts_star[i]);
+//                        System.out.println("t" + (currentTimeStep + 1) + "n" + i + "TfNext " + currentTimeStepNode.next.thisTS.Tf[i] + "TsNext " + currentTimeStepNode.next.thisTS.Ts[i]);
+//                        System.out.println("t" + currentTimeStep + "n" + i + "M00: " + matrixM_inv[0][0] + "M01: " + matrixM_inv[0][1]);
                         if (i == 1) {
 //                            currentTimeStepNode.thisTS.Tf[i - 1] = currentTimeStepNode.thisTS.Tf[i]+uf * delta_t / deltaX * (currentTimeStepNode.thisTS.Tf[i] - currentTimeStepNode.thisTS.Tf[i+1]);
 //                            currentTimeStepNode.thisTS.Ts[i - 1] = currentTimeStepNode.thisTS.Ts[i]+ uf * delta_t / deltaX * (currentTimeStepNode.thisTS.Ts[i] - currentTimeStepNode.thisTS.Ts[i + 1]);
@@ -247,6 +233,7 @@ public class CFD_1_Java {
             }
 
             currentTimeStepNode = currentTimeStepNode.next;
+            //System.out.println("NextTf1 " + currentTimeStepNode.thisTS.Tf[1] + "\n");
             currentTimeStepNode.prev = null;
             currentTimeStep++;
         }
@@ -285,7 +272,7 @@ public class CFD_1_Java {
     }
 
     private static void updateParameters(int status) {
-        double area = Math.PI * diameter * diameter / 4;
+        double area = Math.PI * diameter * diameter / 4.;
         uf_charging = m_f_dot / (area * rho_f);
         uf_discharging = -uf_charging;
         if (status == CHARGING) {
@@ -295,28 +282,30 @@ public class CFD_1_Java {
         }
         Re = epsilon * rho_f * ds * uf / mu_f;
         Pr = mu_f * Cp_f / kf;
-        Nu_fs = 0.255 / epsilon * Math.pow(Pr, 1 / 3) * Math.pow(Re, 2 / 3);
+        Nu_fs = (0.255 / epsilon) * Math.pow(Pr, 0.3333333333) * Math.pow(Re, 0.6666666667);
         h_fs = Nu_fs * kf / ds;
         h = 1 / (1 / h_fs + ds / (10 * ks));
-        hv = 6 * (1 - epsilon) * h / ds;
+        hv = 6. * (1. - epsilon) * h / ds;
 
         hv_f = hv / (epsilon * rho_f * Cp_f);
-        hv_s = hv / ((1 - epsilon) * rho_s * Cs);
+        hv_s = hv / ((1. - epsilon) * rho_s * Cs);
 
         alpha_f = kf / (epsilon * rho_f * Cp_f);
 
-        alpha_s = ks / ((1 - epsilon) * rho_s * Cs);
+        alpha_s = ks / ((1. - epsilon) * rho_s * Cs);
 
         matrixM[0][0] = 1 + hv_f * delta_t;
         matrixM[1][0] = -hv_s * delta_t;
         matrixM[0][1] = -hv_f * delta_t;
         matrixM[1][1] = 1 + hv_s * delta_t;
 
+        // System.out.println("Matrix M = [" + matrixM[0][0] + " " + matrixM[0][1] + ";" + matrixM[1][0] + " " + matrixM[1][1] + "\n");
         double OneDivDetM = 1 / (matrixM[0][0] * matrixM[1][1] - matrixM[0][1] * matrixM[1][0]);
 
         matrixM_inv[0][0] = OneDivDetM * matrixM[1][1];
         matrixM_inv[1][0] = -OneDivDetM * matrixM[1][0];
         matrixM_inv[0][1] = -OneDivDetM * matrixM[0][1];
         matrixM_inv[1][1] = OneDivDetM * matrixM[0][0];
+        //  System.out.println("Matrix M-1 = [" + matrixM_inv[0][0] + " " + matrixM_inv[0][1] + ";" + matrixM_inv[1][0] + " " + matrixM_inv[1][1] + "\n");
     }
 }
