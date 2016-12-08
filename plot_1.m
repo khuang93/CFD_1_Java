@@ -1,7 +1,7 @@
 clear all;
 close all
 clc;
-M=csvread('plot_data_pr3_t_4000.0_java.csv',1,0);
+M=csvread('plot_data_pr3_t_30000.0_java.csv',1,0);
 % M=csvread('plot_data_pr3_final_java.csv',1,0);
 
 SOL=csvread('solData.csv',1,0);
@@ -28,17 +28,17 @@ legend Tf Ts
 xlabel 'x in m'
 ylabel 'T in °C'
 
-sizeSOL=size(SOL);
-numRowsSOL=sizeSOL(1);
-numColsSOL=sizeSOL(2);
-xSOL=SOL(1:numRowsSOL,1:1);
-TfSOL=SOL(1:numRowsSOL,2:2);
-TsSOL=SOL(1:numRowsSOL,3:3);
-
-plot(xSOL,TfSOL);
-hold on
-plot(xSOL,TsSOL);
-legend Tf Ts Tf-sol Ts-sol
+% sizeSOL=size(SOL);
+% numRowsSOL=sizeSOL(1);
+% numColsSOL=sizeSOL(2);
+% xSOL=SOL(1:numRowsSOL,1:1);
+% TfSOL=SOL(1:numRowsSOL,2:2);
+% TsSOL=SOL(1:numRowsSOL,3:3);
+% 
+% plot(xSOL,TfSOL);
+% hold on
+% plot(xSOL,TsSOL);
+% legend Tf Ts Tf-sol Ts-sol
 % xlabel 'x in m'
 % ylabel 'T in °C'
 %%
