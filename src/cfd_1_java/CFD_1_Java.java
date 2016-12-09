@@ -257,8 +257,8 @@ public class CFD_1_Java {
     }
 
     private static void updateParameters(int status) {
-        double area = Math.PI * diameter * diameter / 4.;
-        uf_charging = 2.5*m_f_dot / (area * rho_f);
+        double area = epsilon * Math.PI * diameter * diameter / 4.;
+        uf_charging = m_f_dot / (area * rho_f);
         uf_discharging = -uf_charging;
         if (status == CHARGING) {
             uf = uf_charging;
@@ -295,6 +295,11 @@ public class CFD_1_Java {
         matrixM_inv[1][0] = -OneDivDetM * matrixM[1][0];
         matrixM_inv[0][1] = -OneDivDetM * matrixM[0][1];
         matrixM_inv[1][1] = OneDivDetM * matrixM[0][0];
-        //  System.out.println("Matrix M-1 = [" + matrixM_inv[0][0] + " " + matrixM_inv[0][1] + ";" + matrixM_inv[1][0] + " " + matrixM_inv[1][1] + "\n");
+
+        System.out.println("u_fi" + uf);
+        System.out.println("Re" + Re + "Pr" + Pr + "Nu" + Nu_fs);
+        System.out.println("h_fs" + h_fs + "hv" + hv);
+        System.out.println("h_vf" + hv_f + "h_vs" + hv_s);
+        System.out.println("Matrix M-1 = [" + matrixM_inv[0][0] + " " + matrixM_inv[0][1] + ";" + matrixM_inv[1][0] + " " + matrixM_inv[1][1] + "\n");
     }
 }
