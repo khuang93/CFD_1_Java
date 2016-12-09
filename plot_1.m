@@ -3,10 +3,10 @@ close all
 clc;
 
 
-M=csvread('plot_data_pr3_t_5000.0_java.csv',1,0);
+M=csvread('plot_data_pr3_t_15000.0_java.csv',1,0);
 % M=csvread('plot_data_pr3_final_java.csv',1,0);
 
-SOL=csvread('plot_data_pr3_t_2500.0_java.csv',1,0);
+SOL=csvread('plot_data_pr3_t_4500.0_java.csv',1,0);
 sizeM=size(M);
 
 numRows=sizeM(1);

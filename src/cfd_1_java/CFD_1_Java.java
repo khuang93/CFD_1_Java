@@ -25,10 +25,13 @@ public class CFD_1_Java {
     static final int DISCHARGING = 2;
     static final int IDLE_DIS_C = 3;
 
-    static Double t_charging = 2500.;
+    static Double t_charging = 36000.;
     static Double t_idle_C_Dis = 2000.;
-    static Double t_discharging = 500.;
-    static Double t_idle_Dis_C = 1000.;
+    static Double t_discharging = 36000.;
+    static Double t_idle_Dis_C = 2000.;
+    
+    static int t_charging_h = 0;
+    static int t_discharging_h = 0;
 
     static int numberCycles = 1;
 
@@ -52,7 +55,7 @@ public class CFD_1_Java {
     static double uf = 0;
     static double uf_charging = 0.1;
     static double uf_discharging = -0.1;
-    static double Tf_in = 773;
+    static double Tf_in = 873;
 
     static double height, diameter, initTemp;
 
@@ -63,7 +66,7 @@ public class CFD_1_Java {
     static double Cs = 900;
     static double ks = 2;
     static double kf = 0.52;
-    static double m_f_dot = 0.1;
+    static double m_f_dot = 10;
     static double mu_f = 2.63;
     static double ds = 0.03;
 
@@ -279,7 +282,7 @@ public class CFD_1_Java {
 
     private static void updateParameters(int status) {
         double area = epsilon * Math.PI * diameter * diameter / 4.;
-        uf_charging = 0.1;//m_f_dot / (area * rho_f);
+        uf_charging = m_f_dot / (area * rho_f);
         uf_discharging = -uf_charging;
         uf = uf_charging;
         if (status == CHARGING) {
@@ -292,14 +295,14 @@ public class CFD_1_Java {
         Nu_fs = (0.255 / epsilon) * Math.pow(Pr, 0.3333333333) * Math.pow(Re, 0.6666666667);
         h_fs = Nu_fs * kf / ds;
         h = 1 / (1 / h_fs + ds / (10 * ks));
-        hv = 1000;// 6. * (1. - epsilon) * h / ds;
+        hv = 6. * (1. - epsilon) * h / ds;
 
         hv_f = hv / (epsilon * rho_f * Cp_f);
         hv_s = hv / ((1. - epsilon) * rho_s * Cs);
 
-        alpha_f = 2E-7;//kf / (epsilon * rho_f * Cp_f);
+        alpha_f = kf / (epsilon * rho_f * Cp_f);
 
-        alpha_s = 9E-7;//ks / ((1. - epsilon) * rho_s * Cs);
+        alpha_s = ks / ((1. - epsilon) * rho_s * Cs);
 // changes for Pr 5 comparison with exact solution, where the convection terms are set to 0.
 //        alpha_f = 0;
 //        alpha_s = 0;
