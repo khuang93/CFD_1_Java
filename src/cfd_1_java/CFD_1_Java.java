@@ -52,7 +52,7 @@ public class CFD_1_Java {
     static double uf = 0;
     static double uf_charging = 0.1;
     static double uf_discharging = -0.1;
-    static double Tf_in = 873;
+    static double Tf_in = 773;
 
     static double height, diameter, initTemp;
 
@@ -80,9 +80,9 @@ public class CFD_1_Java {
         height = sc.nextDouble();
         diameter = sc.nextDouble();
         numberCells = sc.nextInt();
-        initTemp = sc.nextDouble(); 
-        numberCycles=sc.nextInt();
-        
+        initTemp = sc.nextDouble();
+        numberCycles = sc.nextInt();
+
         sc.close();
 
         double deltaX = height * 1.0f / numberCells;
@@ -175,16 +175,27 @@ public class CFD_1_Java {
 
             } else if (status == DISCHARGING) { //discharging
                 updateParameters(DISCHARGING);
+                //Boundary Condition at x = n, i = nu
                 currentTimeStepNode.next.thisTS.Tf[0] = initTemp;
                 currentTimeStepNode.thisTS.Tf[numberCells + 1] = initTemp;
 
-                for (int i = numberCells; i > 0; i--) {
-                    currentTimeStepNode.thisTS.Tf_star[i] = currentTimeStepNode.thisTS.Tf[i] - uf * delta_t / deltaX * (currentTimeStepNode.thisTS.Tf[i] - currentTimeStepNode.thisTS.Tf[i - 1])
-                            + alpha_f * delta_t / (deltaX * deltaX)
-                            * (currentTimeStepNode.thisTS.Tf[i + 1] - 2 * currentTimeStepNode.thisTS.Tf[i] + currentTimeStepNode.thisTS.Tf[i - 1]);
+                //for the BC at i = 0
+                for (int i = 0; i < numberCells + 1; i++) {
 
-                    currentTimeStepNode.thisTS.Ts_star[i] = currentTimeStepNode.thisTS.Ts[i] + alpha_s * delta_t / (deltaX * deltaX)
-                            * (currentTimeStepNode.thisTS.Ts[i + 1] - 2 * currentTimeStepNode.thisTS.Ts[i] + currentTimeStepNode.thisTS.Ts[i - 1]);
+                    //FTFS
+                    if (i == 0) {
+                        currentTimeStepNode.thisTS.Tf_star[i] = currentTimeStepNode.thisTS.Tf[i] - uf * delta_t / deltaX * (currentTimeStepNode.thisTS.Tf[i + 1] - currentTimeStepNode.thisTS.Tf[i])
+                                + alpha_f * delta_t / (deltaX * deltaX)
+                                * (currentTimeStepNode.thisTS.Tf[i + 1] - 2 * currentTimeStepNode.thisTS.Tf[i] + currentTimeStepNode.thisTS.Tf[i]);
+
+                        currentTimeStepNode.thisTS.Ts_star[i] = currentTimeStepNode.thisTS.Ts[i] + alpha_s * delta_t / (deltaX * deltaX) * (currentTimeStepNode.thisTS.Ts[i + 1] - 2 * currentTimeStepNode.thisTS.Ts[i] + currentTimeStepNode.thisTS.Ts[i]);
+                    } else {
+                        currentTimeStepNode.thisTS.Tf_star[i] = currentTimeStepNode.thisTS.Tf[i] - uf * delta_t / deltaX * (currentTimeStepNode.thisTS.Tf[i + 1] - currentTimeStepNode.thisTS.Tf[i])
+                                + alpha_f * delta_t / (deltaX * deltaX)
+                                * (currentTimeStepNode.thisTS.Tf[i + 1] - 2 * currentTimeStepNode.thisTS.Tf[i] + currentTimeStepNode.thisTS.Tf[i - 1]);
+
+                        currentTimeStepNode.thisTS.Ts_star[i] = currentTimeStepNode.thisTS.Ts[i] + alpha_s * delta_t / (deltaX * deltaX) * (currentTimeStepNode.thisTS.Ts[i + 1] - 2 * currentTimeStepNode.thisTS.Ts[i] + currentTimeStepNode.thisTS.Ts[i - 1]);
+                    }
 
                     //now use inv matrix to get Tfn+1 and tsn+1
                     currentTimeStepNode.next.thisTS.Tf[i] = matrixM_inv[0][0] * 1.0 * currentTimeStepNode.thisTS.Tf_star[i] + matrixM_inv[0][1] * 1.0 * currentTimeStepNode.thisTS.Ts_star[i];
@@ -192,25 +203,7 @@ public class CFD_1_Java {
                     currentTimeStepNode.next.thisTS.Ts[i] = matrixM_inv[1][0] * currentTimeStepNode.thisTS.Tf_star[i] + matrixM_inv[1][1] * currentTimeStepNode.thisTS.Ts_star[i];
 
                 }
-                //for the BC at i = 0
-                {
-                    int i = 0;
-                    currentTimeStepNode.thisTS.Tf_star[i] = currentTimeStepNode.thisTS.Tf[i] - uf * delta_t / deltaX * (currentTimeStepNode.thisTS.Tf[i + 1] - currentTimeStepNode.thisTS.Tf[i])
-                            + alpha_f * delta_t / (deltaX * deltaX)
-                            * (currentTimeStepNode.thisTS.Tf[i + 1] - 2 * currentTimeStepNode.thisTS.Tf[i] + currentTimeStepNode.thisTS.Tf[i]);
 
-                    //System.out.print("n" + n + "Tf" + cellCurrentTime.thisTS.Tf[n] + "\n");
-                    currentTimeStepNode.thisTS.Ts_star[i] = currentTimeStepNode.thisTS.Ts[i] + alpha_s * delta_t / (deltaX * deltaX)
-                            * (currentTimeStepNode.thisTS.Ts[i + 1] - 2 * currentTimeStepNode.thisTS.Ts[i] + currentTimeStepNode.thisTS.Ts[i]);
-
-                    //now use inv matrix to get Tfn+1 and tsn+1
-                    currentTimeStepNode.next.thisTS.Tf[i] = matrixM_inv[0][0] * currentTimeStepNode.thisTS.Tf_star[i] + matrixM_inv[0][1] * currentTimeStepNode.thisTS.Ts_star[i];
-
-                    currentTimeStepNode.next.thisTS.Ts[i] = matrixM_inv[1][0] * currentTimeStepNode.thisTS.Tf_star[i] + matrixM_inv[1][1] * currentTimeStepNode.thisTS.Ts_star[i];
-
-                }
-
-                //Boundary Condition at x = n, i = nu
             } else { //idle
                 currentTimeStepNode.next.thisTS = currentTimeStepNode.thisTS;
             }
@@ -222,9 +215,22 @@ public class CFD_1_Java {
             if (currentTimeStep % (100 * TS_per_sec) == 0 || currentTimeStep < 10 || (4500 * TS_per_sec < currentTimeStep && currentTimeStep < (4500 * TS_per_sec + 20))) {
                 try {
                     PrintStream fout = new PrintStream(new File("plot_data_pr3_t_" + currentTimeStep * 1.0 / TS_per_sec + "_java.csv"));
-                    fout.println("x, Tf, Ts , Tf* , Ts*");
+                    fout.println("x, Tf, Ts , Tf* , Ts*, sigma, d, u_f, Re, Pr, Nu_fs, hv, hv_f, hv_s, alpha_f, alpha_s");
+
                     for (int n = 0; n < initNumberCells; n++) {
-                        fout.println(n * deltaX + "," + currentTimeStepNode.thisTS.Tf[n] + "," + currentTimeStepNode.thisTS.Ts[n] + "," + currentTimeStepNode.thisTS.Tf_star[n] + "," + currentTimeStepNode.thisTS.Ts_star[n]);
+                        fout.print(n * deltaX + "," + currentTimeStepNode.thisTS.Tf[n] + "," + currentTimeStepNode.thisTS.Ts[n] + "," + currentTimeStepNode.thisTS.Tf_star[n] + "," + currentTimeStepNode.thisTS.Ts_star[n] + ",");
+                        fout.print(uf * delta_t / deltaX + ",");
+                        fout.print(alpha_f * delta_t / (deltaX * deltaX) + ",");
+                        fout.print(uf + ",");
+                        fout.print(Re + ",");
+                        fout.print(Pr + ",");
+                        fout.print(Nu_fs + ",");
+                        fout.print(hv + ",");
+                        fout.print(hv_f + ",");
+                        fout.print(hv_s + ",");
+                        fout.print(alpha_f + ",");
+                        fout.print(alpha_s + "\n");
+
                     }
                 } catch (FileNotFoundException ex) {
                     Logger.getLogger(CFD_1_Java.class.getName()).log(Level.SEVERE, null, ex);
@@ -234,7 +240,7 @@ public class CFD_1_Java {
 
             currentTimeStepNode = currentTimeStepNode.next;
             //System.out.println("NextTf1 " + currentTimeStepNode.thisTS.Tf[1] + "\n");
-            currentTimeStepNode.prev = null;
+            currentTimeStepNode.prev.prev = null;
             currentTimeStep++;
         }
 
@@ -272,18 +278,16 @@ public class CFD_1_Java {
     }
 
     private static void updateParameters(int status) {
-        double area = Math.PI * diameter * diameter / 4.;
-
-//pr 5 comparison only works with uf multiplies by 2.5.
-        uf_charging = 0.1;//2.5 * m_f_dot / (area * rho_f);
+        double area = epsilon * Math.PI * diameter * diameter / 4.;
+        uf_charging = 0.1;//m_f_dot / (area * rho_f);
         uf_discharging = -uf_charging;
         uf = uf_charging;
-//        if (status == CHARGING) {
-//            uf = uf_charging;
-//        } else if (status == DISCHARGING) {
-//            uf = uf_discharging;
-//        }
-        Re = epsilon * rho_f * ds * uf / mu_f;
+        if (status == CHARGING) {
+            uf = uf_charging;
+        } else if (status == DISCHARGING) {
+            uf = uf_discharging;
+        }
+        Re = epsilon * rho_f * ds * Math.abs(uf) / mu_f;
         Pr = mu_f * Cp_f / kf;
         Nu_fs = (0.255 / epsilon) * Math.pow(Pr, 0.3333333333) * Math.pow(Re, 0.6666666667);
         h_fs = Nu_fs * kf / ds;
