@@ -29,7 +29,7 @@ public class CFD_1_Java {
     static Double t_idle_C_Dis = 2000.;
     static Double t_discharging = 36000.;
     static Double t_idle_Dis_C = 2000.;
-    
+
     static int t_charging_h = 0;
     static int t_discharging_h = 0;
 
@@ -56,6 +56,14 @@ public class CFD_1_Java {
     static double uf_charging = 0.1;
     static double uf_discharging = -0.1;
     static double Tf_in = 873;
+    static double T_ref = 288.15; //Reference Temp for calculation of the exergy
+
+    //declaration of the exerfy variables
+    static double eta = 0;
+    static double ex_d_out = 0;
+    static double ex_d_in = 0;
+    static double ex_c_out = 0;
+    static double ex_c_in = 0;
 
     static double height, diameter, initTemp;
 
@@ -85,6 +93,11 @@ public class CFD_1_Java {
         numberCells = sc.nextInt();
         initTemp = sc.nextDouble();
         numberCycles = sc.nextInt();
+        t_charging_h = sc.nextInt();
+        t_discharging_h = t_charging_h;
+
+        t_charging = t_charging_h * 3600.;
+        t_discharging = t_discharging_h * 3600.;
 
         sc.close();
 
@@ -93,21 +106,24 @@ public class CFD_1_Java {
         updateParameters(CHARGING);
 
 //        File file1 = new File("plot_data_pr1_JAVA.csv");
+        int total_t_per_cycle = 24 * 3600;
+        int timeStepsPerCycle = total_t_per_cycle * TS_per_sec;
+
+        t_idle_C_Dis = total_t_per_cycle / 2 - t_charging;
+        t_idle_Dis_C = t_idle_C_Dis;
+
         ArrayList<Double> t_states = new ArrayList<>();
         t_states.add(t_charging);
         t_states.add(t_idle_C_Dis);
         t_states.add(t_discharging);
         t_states.add(t_idle_Dis_C);
 
-        int timeStepsPerCycle = 1;
-        int total_t_per_cycle = 1;
-        for (double t : t_states) {
-            total_t_per_cycle += t;
-            timeStepsPerCycle = (int) (timeStepsPerCycle + (t * TS_per_sec));
-        }
-        timeStepsPerCycle -= 1;
-        total_t_per_cycle -= 1;
-
+//        for (double t : t_states) {
+//            total_t_per_cycle += t;
+//            timeStepsPerCycle = (int) (timeStepsPerCycle + (t * TS_per_sec));
+//        }
+//        timeStepsPerCycle -= 1;
+//        total_t_per_cycle -= 1;
         delta_t = 1.0 / TS_per_sec;//total_t_per_cycle * 1.0 / timeStepsPerCycle;
 
         int total_timesteps = timeStepsPerCycle * numberCycles;
@@ -115,12 +131,12 @@ public class CFD_1_Java {
         int initNumberCells = numberCells + 2;
 
         //creation of the linked list. each node represents a timestep.
-        TimeStepNode T0 = new TimeStepNode(initNumberCells);
+        TimeStepNode T_Node_0 = new TimeStepNode(initNumberCells);
         TimeStepNode currentTimeStepNode;
         TimeStepNode TLast = new TimeStepNode(initNumberCells);
-        T0.prev = null;
+        T_Node_0.prev = null;
 
-        currentTimeStepNode = T0;//.next;
+        currentTimeStepNode = T_Node_0;//.next;
         currentTimeStepNode.thisTS.Tf[0] = Tf_in;
         currentTimeStepNode.thisTS.Ts[0] = initTemp;
         for (int xi = 1; xi < initNumberCells; xi++) {
@@ -131,6 +147,7 @@ public class CFD_1_Java {
 //        double[][] matrixM = new double[2][2];
 //        double[][] matrixM_inv = new double[2][2];
         int currentTimeStep = 0;
+        int currentCycleNumer = 0;
 
         while (currentTimeStep < total_timesteps + 1) {
             int status = getCurrentState(t_states, currentTimeStep * delta_t);
@@ -215,13 +232,33 @@ public class CFD_1_Java {
                 System.out.println("Matrix M-1 = [" + matrixM_inv[0][0] + " " + matrixM_inv[0][1] + ";" + matrixM_inv[1][0] + " " + matrixM_inv[1][1] + "\n");
             }
 
+            //Pr6 Exergy stuffs
+            //discharge : out is at x=0 left end,in is at right end
+            //charge: in is at x=0 left end, out is right end
+            double T_left = currentTimeStepNode.thisTS.Tf[0];
+            double T_right = currentTimeStepNode.thisTS.Tf[numberCells + 1];
+            if (status == DISCHARGING) {
+                ex_d_out = ex_d_out + delta_t * (m_f_dot * Cp_f * (T_left - T_ref - T_ref * Math.log(T_left / T_ref)));
+                ex_d_in = ex_d_in + delta_t * (m_f_dot * Cp_f * (T_right - T_ref - T_ref * Math.log(T_right / T_ref)));
+            } else if (status == CHARGING) {
+                ex_c_out = ex_c_out + delta_t * (m_f_dot * Cp_f * (T_right - T_ref - T_ref * Math.log(T_right / T_ref)));
+                ex_c_in = ex_c_in + delta_t * (m_f_dot * Cp_f * (T_left - T_ref - T_ref * Math.log(T_left / T_ref)));
+            }
+            currentCycleNumer = currentTimeStep / timeStepsPerCycle;
+            
+            if(currentTimeStep%timeStepsPerCycle==0){
+                eta=(ex_d_out-ex_d_in)/(ex_c_in-ex_c_out);
+            }
+
             if (currentTimeStep % (100 * TS_per_sec) == 0 || currentTimeStep < 10 || (4500 * TS_per_sec < currentTimeStep && currentTimeStep < (4500 * TS_per_sec + 20))) {
                 try {
                     PrintStream fout = new PrintStream(new File("plot_data_pr3_t_" + currentTimeStep * 1.0 / TS_per_sec + "_java.csv"));
-                    fout.println("x, Tf, Ts , Tf* , Ts*, sigma, d, u_f, Re, Pr, Nu_fs, hv, hv_f, hv_s, alpha_f, alpha_s");
+                    fout.println("cycleNumber, x, Tf, Ts , Tf* , Ts*, sigma, d, u_f, Re, Pr, Nu_fs, hv, hv_f, hv_s, alpha_f, alpha_s, eta");
 
                     for (int n = 0; n < initNumberCells; n++) {
+                        fout.print(currentCycleNumer + ",");
                         fout.print(n * deltaX + "," + currentTimeStepNode.thisTS.Tf[n] + "," + currentTimeStepNode.thisTS.Ts[n] + "," + currentTimeStepNode.thisTS.Tf_star[n] + "," + currentTimeStepNode.thisTS.Ts_star[n] + ",");
+
                         fout.print(uf * delta_t / deltaX + ",");
                         fout.print(alpha_f * delta_t / (deltaX * deltaX) + ",");
                         fout.print(uf + ",");
@@ -232,7 +269,8 @@ public class CFD_1_Java {
                         fout.print(hv_f + ",");
                         fout.print(hv_s + ",");
                         fout.print(alpha_f + ",");
-                        fout.print(alpha_s + "\n");
+                        fout.print(alpha_s + ",");
+                        fout.print(eta + "\n");
 
                     }
                 } catch (FileNotFoundException ex) {
@@ -303,9 +341,6 @@ public class CFD_1_Java {
         alpha_f = kf / (epsilon * rho_f * Cp_f);
 
         alpha_s = ks / ((1. - epsilon) * rho_s * Cs);
-// changes for Pr 5 comparison with exact solution, where the convection terms are set to 0.
-//        alpha_f = 0;
-//        alpha_s = 0;
 
         matrixM[0][0] = 1 + hv_f * delta_t;
         matrixM[1][0] = -hv_s * delta_t;
