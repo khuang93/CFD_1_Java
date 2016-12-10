@@ -6,16 +6,16 @@ clc;
 M=csvread('plot_data_pr3_t_10000.0_java.csv',1,0);
 % M=csvread('plot_data_pr3_final_java.csv',1,0);
 
-SOL=csvread('plot_data_pr3_t_74000.0_java.csv',1,0);
+SOL=csvread('plot_data_pr3_t_20000.0_java.csv',1,0);
 sizeM=size(M);
 
 numRows=sizeM(1);
 numCols=sizeM(2);
-x=M(1:numRows-1,1:1);
-Tf=M(1:numRows-1,2:2);
-Ts=M(1:numRows-1,3:3);
-Tf_star=M(1:numRows-1,4:4);
-Ts_star=M(1:numRows-1,5:5);
+x=M(1:numRows,2:2);
+Tf=M(1:numRows,3:3);
+Ts=M(1:numRows,4:4);
+Tf_star=M(1:numRows,5:5);
+Ts_star=M(1:numRows,6:6);
 
 
 plot(x,Tf);
@@ -33,9 +33,9 @@ ylabel 'T in °C'
 sizeSOL=size(SOL);
 numRowsSOL=sizeSOL(1);
 numColsSOL=sizeSOL(2);
-xSOL=SOL(1:numRowsSOL-1,1:1);
-TfSOL=SOL(1:numRowsSOL-1,2:2);
-TsSOL=SOL(1:numRowsSOL-1,3:3);
+xSOL=SOL(1:numRowsSOL,2:2);
+TfSOL=SOL(1:numRowsSOL,3:3);
+TsSOL=SOL(1:numRowsSOL,4:4);
 
 plot(xSOL,TfSOL);
 hold on

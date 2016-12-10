@@ -25,9 +25,9 @@ public class CFD_1_Java {
     static final int DISCHARGING = 2;
     static final int IDLE_DIS_C = 3;
 
-    static Double t_charging = 36000.;
+    static Double t_charging = 3600.;
     static Double t_idle_C_Dis = 2000.;
-    static Double t_discharging = 36000.;
+    static Double t_discharging = 3600.;
     static Double t_idle_Dis_C = 2000.;
 
     static int t_charging_h = 0;
@@ -64,6 +64,10 @@ public class CFD_1_Java {
     static double ex_d_in = 0;
     static double ex_c_out = 0;
     static double ex_c_in = 0;
+    static double Q_charged = 0;
+    static double Q_discharged = 0;
+    static double capacity_factor = 0;
+    static double Q_max = 0;
 
     static double height, diameter, initTemp;
 
@@ -93,25 +97,25 @@ public class CFD_1_Java {
         numberCells = sc.nextInt();
         initTemp = sc.nextDouble();
         numberCycles = sc.nextInt();
-        t_charging_h = sc.nextInt();
-        t_discharging_h = t_charging_h;
-
-        t_charging = t_charging_h * 3600.;
-        t_discharging = t_discharging_h * 3600.;
+//        t_charging_h = sc.nextInt();
+//        t_discharging_h = t_charging_h;
+//
+//        t_charging = t_charging_h * 3600.;
+//        t_discharging = t_discharging_h * 3600.;
 
         sc.close();
 
         double deltaX = height * 1.0f / numberCells;
 
         updateParameters(CHARGING);
+        Q_max = (epsilon * rho_f * Cp_f + (1 - epsilon) * rho_s * Cs) * Math.PI / 4 * diameter * diameter * height * (Tf_in - initTemp);
 
 //        File file1 = new File("plot_data_pr1_JAVA.csv");
-        int total_t_per_cycle = 24 * 3600;
+        int total_t_per_cycle = 5600 * 2;//24 * 3600;
         int timeStepsPerCycle = total_t_per_cycle * TS_per_sec;
 
-        t_idle_C_Dis = total_t_per_cycle / 2 - t_charging;
-        t_idle_Dis_C = t_idle_C_Dis;
-
+//        t_idle_C_Dis = total_t_per_cycle / 2 - t_charging;
+//        t_idle_Dis_C = t_idle_C_Dis;
         ArrayList<Double> t_states = new ArrayList<>();
         t_states.add(t_charging);
         t_states.add(t_idle_C_Dis);
@@ -167,6 +171,8 @@ public class CFD_1_Java {
 
             //different states
             if (status == CHARGING) { //charging
+                double Tf_integral = 0;
+                double Ts_integral = 0;
                 currentTimeStepNode.next.thisTS.Tf[0] = Tf_in;
                 updateParameters(CHARGING);
                 for (int i = 0; i < numberCells + 1; i++) {
@@ -191,9 +197,15 @@ public class CFD_1_Java {
 
                         currentTimeStepNode.next.thisTS.Ts[i] = matrixM_inv[1][0] * currentTimeStepNode.thisTS.Tf_star[i] + matrixM_inv[1][1] * currentTimeStepNode.thisTS.Ts_star[i];
                     }
+                    //calc the Q
+                    Tf_integral += epsilon * rho_f * Cp_f * (currentTimeStepNode.thisTS.Tf[i] - initTemp);
+                    Ts_integral += (1 - epsilon) * rho_s * Cs * (currentTimeStepNode.thisTS.Ts[i] - initTemp);
+                    Q_charged += Math.PI / 4 * diameter * diameter * (Tf_integral + Ts_integral);
                 }
 
             } else if (status == DISCHARGING) { //discharging
+                double Tf_integral = 0;
+                double Ts_integral = 0;
                 updateParameters(DISCHARGING);
                 //Boundary Condition at x = n, i = nu
                 currentTimeStepNode.next.thisTS.Tf[0] = initTemp;
@@ -222,14 +234,14 @@ public class CFD_1_Java {
 
                     currentTimeStepNode.next.thisTS.Ts[i] = matrixM_inv[1][0] * currentTimeStepNode.thisTS.Tf_star[i] + matrixM_inv[1][1] * currentTimeStepNode.thisTS.Ts_star[i];
 
+                    //calc the Q
+                    Tf_integral += epsilon * rho_f * Cp_f * (currentTimeStepNode.thisTS.Tf[i] - initTemp);
+                    Ts_integral += (1 - epsilon) * rho_s * Cs * (currentTimeStepNode.thisTS.Ts[i] - initTemp);
+                    Q_discharged += Math.PI / 4 * diameter * diameter * (Tf_integral + Ts_integral);
                 }
 
             } else { //idle
                 currentTimeStepNode.next.thisTS = currentTimeStepNode.thisTS;
-            }
-            if (currentTimeStep % (100 * TS_per_sec) == 0) {
-                System.out.println("current_t = " + currentTimeStep * delta_t);
-                System.out.println("Matrix M-1 = [" + matrixM_inv[0][0] + " " + matrixM_inv[0][1] + ";" + matrixM_inv[1][0] + " " + matrixM_inv[1][1] + "\n");
             }
 
             //Pr6 Exergy stuffs
@@ -244,16 +256,28 @@ public class CFD_1_Java {
                 ex_c_out = ex_c_out + delta_t * (m_f_dot * Cp_f * (T_right - T_ref - T_ref * Math.log(T_right / T_ref)));
                 ex_c_in = ex_c_in + delta_t * (m_f_dot * Cp_f * (T_left - T_ref - T_ref * Math.log(T_left / T_ref)));
             }
-            currentCycleNumer = currentTimeStep / timeStepsPerCycle;
+            currentCycleNumer = currentTimeStep / timeStepsPerCycle + 1;
+
+            if (currentTimeStep % timeStepsPerCycle == 0) {
+                eta = (ex_d_out - ex_d_in) / (ex_c_in - ex_c_out);
+                ex_d_out = 0;
+                ex_d_in = 0;
+                ex_c_out = 0;
+                ex_c_in = 0;
+            }
+
+            capacity_factor = (Q_charged - Q_discharged) / Q_max;
             
-            if(currentTimeStep%timeStepsPerCycle==0){
-                eta=(ex_d_out-ex_d_in)/(ex_c_in-ex_c_out);
+            if (currentTimeStep % (100 * TS_per_sec) == 0) {
+                System.out.println("Cycle = " + currentCycleNumer);
+                System.out.println("current_t = " + currentTimeStep * delta_t);
+//                System.out.println("Matrix M-1 = [" + matrixM_inv[0][0] + " " + matrixM_inv[0][1] + ";" + matrixM_inv[1][0] + " " + matrixM_inv[1][1] + "\n");
             }
 
             if (currentTimeStep % (100 * TS_per_sec) == 0 || currentTimeStep < 10 || (4500 * TS_per_sec < currentTimeStep && currentTimeStep < (4500 * TS_per_sec + 20))) {
                 try {
                     PrintStream fout = new PrintStream(new File("plot_data_pr3_t_" + currentTimeStep * 1.0 / TS_per_sec + "_java.csv"));
-                    fout.println("cycleNumber, x, Tf, Ts , Tf* , Ts*, sigma, d, u_f, Re, Pr, Nu_fs, hv, hv_f, hv_s, alpha_f, alpha_s, eta");
+                    fout.println("cycleNumber, x, Tf, Ts , Tf* , Ts*, sigma, d, u_f, Re, Pr, Nu_fs, hv, hv_f, hv_s, alpha_f, alpha_s,ex_d_out,ex_d_in,ex_c_out,ex_c_in, eta, Q_charged, Q_discharged,Q_max,capacity_factor");
 
                     for (int n = 0; n < initNumberCells; n++) {
                         fout.print(currentCycleNumer + ",");
@@ -270,7 +294,15 @@ public class CFD_1_Java {
                         fout.print(hv_s + ",");
                         fout.print(alpha_f + ",");
                         fout.print(alpha_s + ",");
-                        fout.print(eta + "\n");
+                        fout.print(ex_d_out + ",");
+                        fout.print(ex_d_in + ",");
+                        fout.print(ex_c_out + ",");
+                        fout.print(ex_c_in + ",");
+                        fout.print(eta + ",");
+                        fout.print(Q_charged + ",");
+                        fout.print(Q_discharged + ",");
+                        fout.print(Q_max + ",");
+                        fout.print(capacity_factor + "\n");
 
                     }
                 } catch (FileNotFoundException ex) {
@@ -278,6 +310,8 @@ public class CFD_1_Java {
                 }
 
             }
+
+            
 
             currentTimeStepNode = currentTimeStepNode.next;
             //System.out.println("NextTf1 " + currentTimeStepNode.thisTS.Tf[1] + "\n");
