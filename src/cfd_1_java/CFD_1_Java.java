@@ -331,6 +331,7 @@ public class CFD_1_Java {
                     fout.println("delta_T,eta, c_factor");
                     fout.println(deltaT + "," + eta.get(currentCycleNumber - 1) + " , " + capacity_factor);
                     deltaT = 0;//reset deltaT
+                    //Stopping Criteria for convergence of eta
                     if (currentCycleNumber > 2) {
                         if (eta.get(currentCycleNumber - 2) - eta.get(currentCycleNumber - 3) < 1E-4) {
                             break;
