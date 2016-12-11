@@ -333,7 +333,7 @@ public class CFD_1_Java {
                     deltaT = 0;//reset deltaT
                     //Stopping Criteria for convergence of eta
                     if (currentCycleNumber > 2) {
-                        if (eta.get(currentCycleNumber - 2) - eta.get(currentCycleNumber - 3) < 1E-4) {
+                        if (eta.get(currentCycleNumber - 1) - eta.get(currentCycleNumber - 2) < 1E-4) {
                             break;
                         }
                     }
@@ -372,7 +372,7 @@ public class CFD_1_Java {
                         fout.print(ex_d_in + ",");
                         fout.print(ex_c_out + ",");
                         fout.print(ex_c_in + ",");
-                        fout.print(eta + ",");
+                        fout.print((eta.size()==0?0:eta.get(eta.size()-1)) + ",");
                         fout.print(Q_charged + ",");
                         fout.print(Q_discharged + ",");
                         fout.print(Q_max + ",");
@@ -414,7 +414,7 @@ public class CFD_1_Java {
                 fout.print(ex_d_in + ",");
                 fout.print(ex_c_out + ",");
                 fout.print(ex_c_in + ",");
-                fout.print(eta + ",");
+                fout.print((eta.size()==0?0:eta.get(eta.size()-1)) + ",");
                 fout.print(Q_charged + ",");
                 fout.print(Q_discharged + ",");
                 fout.print(Q_max + ",");
