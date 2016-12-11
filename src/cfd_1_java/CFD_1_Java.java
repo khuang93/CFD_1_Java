@@ -24,6 +24,7 @@ public class CFD_1_Java {
     static final int IDLE_C_DIS = 1;
     static final int DISCHARGING = 2;
     static final int IDLE_DIS_C = 3;
+    static final int writeOutFreq = 3600;
 
     static Double t_charging = 3600.;
     static Double t_idle_C_Dis = 2000.;
@@ -328,13 +329,13 @@ try {
             }
             double t_lastCycle = (currentTimeStep * TS_per_sec) % total_t_per_cycle;
 
-            if ((currentTimeStep + 1) % (1200 * TS_per_sec) == 0) {
+            if ((currentTimeStep + 1) % (writeOutFreq * TS_per_sec) == 0) {
                 System.out.println("Cycle = " + currentCycleNumber);
                 System.out.println("current_t = " + (currentTimeStep + 1) * delta_t);
 //                System.out.println("Matrix M-1 = [" + matrixM_inv[0][0] + " " + matrixM_inv[0][1] + ";" + matrixM_inv[1][0] + " " + matrixM_inv[1][1] + "\n");
             }
 
-            if (((currentTimeStep + 1) % (1200 * TS_per_sec) == 0 || currentTimeStep < 10) || (currentTimeStep + 1) % timeStepsPerCycle == 0) {
+            if (((currentTimeStep + 1) % (writeOutFreq * TS_per_sec) == 0 || currentTimeStep < 10) || (currentTimeStep + 1) % timeStepsPerCycle == 0) {
 //                try {
                     PrintStream fout = new PrintStream(new File("plot_data_pr3_t_" + (currentTimeStep * 1.0 + 1) / TS_per_sec + "_java.csv"));
                     fout.println("cycleNumber, x, Tf, Ts , Tf* , Ts*,status, sigma, d, u_f, Re, Pr, Nu_fs, hv, hv_f, hv_s, alpha_f, alpha_s,ex_d_out,ex_d_in,ex_c_out,ex_c_in, eta, Q_charged, Q_discharged,Q_max,capacity_factor");
