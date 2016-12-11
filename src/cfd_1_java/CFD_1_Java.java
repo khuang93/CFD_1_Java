@@ -458,7 +458,7 @@ public class CFD_1_Java {
                 uf = uf_discharging;
                 break;
             default:
-                uf = 0.1;
+                uf = 0.;
                 break;
         }
         Re = epsilon * rho_f * ds * Math.abs(uf) / mu_f;
