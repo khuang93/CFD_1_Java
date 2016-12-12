@@ -108,8 +108,9 @@ public class CFD_1_Java {
         t_charging = t_charging_h * 3600.;
         t_discharging = t_discharging_h * 3600.;
 
-        System.out.println("Enter n for k = 2*pi*n/L : ");
-        int n_k = sc.nextInt();
+//        System.out.println("Enter n for k = 2*pi*n/L : ");
+        int n_k = 1;
+        
 
         sc.close();
 
@@ -121,7 +122,7 @@ public class CFD_1_Java {
         Q_max = (epsilon * rho_f * Cp_f + (1 - epsilon) * rho_s * Cs) * Math.PI / 4 * diameter * diameter * height * (Tf_in - initTemp);
 
 //        File file1 = new File("plot_data_pr1_JAVA.csv");
-        int total_t_per_cycle = 100;//24 * 3600;
+        int total_t_per_cycle = 500;//24 * 3600;
         int timeStepsPerCycle = total_t_per_cycle * TS_per_sec;
 
         t_idle_C_Dis = 0.;//total_t_per_cycle / 2 - t_charging;
@@ -495,9 +496,9 @@ public class CFD_1_Java {
         hv_f = hv / (epsilon * rho_f * Cp_f);
         hv_s = hv / ((1. - epsilon) * rho_s * Cs);
 
-        alpha_f = 1E-2;// kf / (epsilon * rho_f * Cp_f);
+        alpha_f = 4E-4;// kf / (epsilon * rho_f * Cp_f);
 
-        alpha_s = 1E-2;//ks / ((1. - epsilon) * rho_s * Cs);
+        alpha_s = 4E-4;//ks / ((1. - epsilon) * rho_s * Cs);
 
         matrixM[0][0] = 1 + hv_f * delta_t;
         matrixM[1][0] = -hv_s * delta_t;
