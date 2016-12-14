@@ -60,7 +60,7 @@ public class CFD_1_Java {
     static double T_ref = 288.15; //Reference Temp for calculation of the exergy
     static double deltaT = 0;
 
-    //declaration of the exerfy variables
+    //declaration of the Pr6 variables
     static ArrayList<Double> eta = new ArrayList<Double>();
     static double ex_d_out = 0;
     static double ex_d_in = 0;
@@ -91,7 +91,7 @@ public class CFD_1_Java {
      * @param args the command line arguments
      */
     public static void main(String[] args) {
-        // double height, diameter, initTemp;
+        //read in height, diameter, numberCells, initTemo, numberCycles and t_charging_h
         final int numberCells;
         Scanner sc = new Scanner(System.in);
         height = sc.nextDouble();
@@ -110,9 +110,9 @@ public class CFD_1_Java {
         double deltaX = height * 1.0f / numberCells;
 
         updateParameters(CHARGING);
+        //calculation of Q_max for the capacity factor calculation
         Q_max = (epsilon * rho_f * Cp_f + (1 - epsilon) * rho_s * Cs) * Math.PI / 4 * diameter * diameter * height * (Tf_in - initTemp);
 
-//        File file1 = new File("plot_data_pr1_JAVA.csv");
         int total_t_per_cycle = 24 * 3600;
         int timeStepsPerCycle = total_t_per_cycle * TS_per_sec;
 
@@ -124,14 +124,7 @@ public class CFD_1_Java {
         t_states.add(t_discharging);
         t_states.add(t_idle_Dis_C);
 
-//        for (double t : t_states) {
-//            total_t_per_cycle += t;
-//            timeStepsPerCycle = (int) (timeStepsPerCycle + (t * TS_per_sec));
-//        }
-//        timeStepsPerCycle -= 1;
-//        total_t_per_cycle -= 1;
-        delta_t = 1.0 / TS_per_sec;//total_t_per_cycle * 1.0 / timeStepsPerCycle;
-
+        delta_t = 1.0 / TS_per_sec;
         int total_timesteps = timeStepsPerCycle * numberCycles;
 
         int initNumberCells = numberCells + 1;
@@ -150,15 +143,13 @@ public class CFD_1_Java {
             currentTimeStepNode.thisTS.Ts[xi] = initTemp;//Math.sin(k * xi * deltaX);
         }
 
-//        double[][] matrixM = new double[2][2];
-//        double[][] matrixM_inv = new double[2][2];
         int currentTimeStep = 0;
         double currentTime = currentTimeStep * delta_t;
         int currentCycleNumber = 0;
+        double Tf_rightEnd_before_charge = initTemp;
         try {
             while (currentTimeStep < total_timesteps + 1) {
                 int status = getCurrentState(t_states, currentTimeStep * delta_t);
-//                foutT.print(currentTimeStep * delta_t + "," + status + "\n");
                 currentTimeStepNode.next = new TimeStepNode(initNumberCells);
                 currentTimeStepNode.next.next = null;
                 currentTimeStepNode.next.prev = currentTimeStepNode;
@@ -173,8 +164,8 @@ public class CFD_1_Java {
                 //different states
                 switch (status) {
                     case CHARGING: {
-
                         //charging
+                        //declaration of variables needed to calculate Q
                         double Tf_integral = 0;
                         double Ts_integral = 0;
                         //BC: Tf at x=0 always Tf_in for Charging
@@ -215,6 +206,7 @@ public class CFD_1_Java {
                             Ts_integral += (1 - epsilon) * rho_s * Cs * (currentTimeStepNode.thisTS.Ts[i] - initTemp) * deltaX;
 
                         }
+                        //Q(t) for charging
                         Q_charged = Math.PI / 4 * diameter * diameter * (Tf_integral + Ts_integral);
                         break;
                     }
@@ -224,9 +216,7 @@ public class CFD_1_Java {
                         double Ts_integral = 0;
                         updateParameters(DISCHARGING);
                         //Boundary Condition at x = n, i = nu
-                        //currentTimeStepNode.next.thisTS.Tf[0] = initTemp;
                         currentTimeStepNode.thisTS.Tf[numberCells] = initTemp;
-                        //for the BC at i = 0
                         for (int i = 0; i <= numberCells; i++) {
 
                             //FTFS
@@ -260,14 +250,15 @@ public class CFD_1_Java {
                             Ts_integral += (1 - epsilon) * rho_s * Cs * (currentTimeStepNode.thisTS.Ts[i] - initTemp) * deltaX;
 
                         }
+                        //calculates Q(t) for discharge.
                         Q_discharged = Math.PI / 4 * diameter * diameter * (Tf_integral + Ts_integral);
                         break;
                     }
                     default:
                         //idle
                         updateParameters(IDLE_C_DIS);
-                        //                currentTimeStepNode.next.thisTS.Tf[0] = initTemp;
-//                currentTimeStepNode.thisTS.Tf[numberCells + 1] = initTemp;
+                        //iterate over cells
+                        //not the advection term is completely deleted
                         for (int i = 0; i <= numberCells; i++) {
                             if (i == 0) {
                                 currentTimeStepNode.thisTS.Tf_star[i] = currentTimeStepNode.thisTS.Tf[i] + alpha_f * delta_t / (deltaX * deltaX)
@@ -293,21 +284,24 @@ public class CFD_1_Java {
                                         * (currentTimeStepNode.thisTS.Ts[i + 1] - 2 * currentTimeStepNode.thisTS.Ts[i] + currentTimeStepNode.thisTS.Ts[i - 1]);
 
                             }
-                            //now use inv matrix to get Tfn+1 and tsn+1
+                            //now use inv matrix to get Tfn+1 and Tsn+1
                             currentTimeStepNode.next.thisTS.Tf[i] = matrixM_inv[0][0] * 1.0 * currentTimeStepNode.thisTS.Tf_star[i] + matrixM_inv[0][1] * 1.0 * currentTimeStepNode.thisTS.Ts_star[i];
 
                             currentTimeStepNode.next.thisTS.Ts[i] = matrixM_inv[1][0] * currentTimeStepNode.thisTS.Tf_star[i] + matrixM_inv[1][1] * currentTimeStepNode.thisTS.Ts_star[i];
 
                         }
+                        //this will be updated each idle period and will be left at the value of the last idle time step before used to calculate deltaT
+                        Tf_rightEnd_before_charge = currentTimeStepNode.thisTS.Tf[numberCells];
                         break;
                 }
 
-                //Pr6 Exergy stuffs
+                //Pr6 Exergy efficiency
                 //discharge : out is at x=0 left end,in is at right end
                 //charge: in is at x=0 left end, out is right end
                 double T_left = currentTimeStepNode.thisTS.Tf[0];
                 double T_right = currentTimeStepNode.thisTS.Tf[numberCells];
 
+                //integration over time for the exergy flux
                 if (status == DISCHARGING) {
                     ex_d_out = ex_d_out + delta_t * (m_f_dot * Cp_f * (T_left - T_ref - T_ref * Math.log(T_left / T_ref)));
                     ex_d_in = ex_d_in + delta_t * (m_f_dot * Cp_f * (T_right - T_ref - T_ref * Math.log(T_right / T_ref)));
@@ -315,10 +309,14 @@ public class CFD_1_Java {
                 } else if (status == CHARGING) {
                     ex_c_out = ex_c_out + delta_t * (m_f_dot * Cp_f * (T_right - T_ref - T_ref * Math.log(T_right / T_ref)));
                     ex_c_in = ex_c_in + delta_t * (m_f_dot * Cp_f * (T_left - T_ref - T_ref * Math.log(T_left / T_ref)));
-                    deltaT = currentTimeStepNode.thisTS.Tf[numberCells] - initTemp;
+                    //calculates the temperature increase. when the charging phase ends the variable will have the value of deltaT at the end of charging
+                    //initially i thought this is the difference to initTemp. However it makes more sense to calculate the delta of T to the beginning of this charge cycle
+                    deltaT = currentTimeStepNode.thisTS.Tf[numberCells] - Tf_rightEnd_before_charge;//initTemp;
                 }
+
                 currentCycleNumber = currentTimeStep / timeStepsPerCycle + 1;
 
+                //will be executed after each cycle, calculates capacity factor and eta. writes out in File, then resets the variables to 0 if needed
                 if (currentTimeStep % timeStepsPerCycle == (timeStepsPerCycle - 1)) {
                     eta.add((ex_d_out - ex_d_in) / (ex_c_in - ex_c_out));
                     ex_d_out = 0;
@@ -327,7 +325,7 @@ public class CFD_1_Java {
                     ex_c_in = 0;
                     capacity_factor = (Q_charged - Q_discharged) / Q_max;
                     System.out.println("delta_T = " + deltaT + " eta = " + eta.get(currentCycleNumber - 1) + " c_factor = " + capacity_factor);
-                    PrintStream fout = new PrintStream(new File("eta_cFactor_" + currentCycleNumber + ".csv"));
+                    PrintStream fout = new PrintStream(new File("deltaT_eta_cFactor_" + currentCycleNumber + ".csv"));
                     fout.println("delta_T,eta, c_factor");
                     fout.println(deltaT + "," + eta.get(currentCycleNumber - 1) + " , " + capacity_factor);
                     deltaT = 0;//reset deltaT
@@ -340,15 +338,16 @@ public class CFD_1_Java {
                 }
                 double t_lastCycle = (currentTimeStep * TS_per_sec) % total_t_per_cycle;
 
+                //console output to show the progress of the current execution
                 if ((currentTimeStep + 1) % (writeOutFreq * TS_per_sec) == 0) {
                     System.out.println("Cycle = " + currentCycleNumber);
                     System.out.println("current_t = " + (currentTimeStep + 1) * delta_t);
-//                System.out.println("Matrix M-1 = [" + matrixM_inv[0][0] + " " + matrixM_inv[0][1] + ";" + matrixM_inv[1][0] + " " + matrixM_inv[1][1] + "\n");
                 }
 
-                if (((currentTimeStep + 1) % (writeOutFreq * TS_per_sec) == 0 || currentTimeStep ==0) || (currentTimeStep + 1) % timeStepsPerCycle == 0) {
-//                try {
-                    PrintStream fout = new PrintStream(new File("data_t_" + (currentTimeStep * 1.0 + 1) / (TS_per_sec*3600) + "h_tCharge_"+t_charging_h+".csv"));
+                //Write out file with all the variables every 3600s
+                if (((currentTimeStep + 1) % (writeOutFreq * TS_per_sec) == 0 || currentTimeStep == 0) || (currentTimeStep + 1) % timeStepsPerCycle == 0) {
+
+                    PrintStream fout = new PrintStream(new File("data_t_" + (currentTimeStep * 1.0 + 1) / (TS_per_sec * 3600) + "h_tCharge_" + t_charging_h + ".csv"));
                     fout.println("cycleNumber, x, Tf, Ts , Tf* , Ts*,status, sigma, d, u_f, Re, Pr, Nu_fs,h_fs,h, hv, hv_f, hv_s, alpha_f, alpha_s,ex_d_out,ex_d_in,ex_c_out,ex_c_in, eta, Q_charged, Q_discharged,Q_max,capacity_factor");
 
                     for (int n = 0; n < initNumberCells; n++) {
@@ -372,26 +371,23 @@ public class CFD_1_Java {
                         fout.print(ex_d_in + ",");
                         fout.print(ex_c_out + ",");
                         fout.print(ex_c_in + ",");
-                        fout.print((eta.size()==0?0:eta.get(eta.size()-1)) + ",");
+                        fout.print((eta.size() == 0 ? 0 : eta.get(eta.size() - 1)) + ",");
                         fout.print(Q_charged + ",");
                         fout.print(Q_discharged + ",");
                         fout.print(Q_max + ",");
                         fout.print(capacity_factor + "\n");
 
                     }
-//                    System.out.println((1 / h_fs + ds / (10 * ks)));
-//                } catch (FileNotFoundException ex) {
-//                    Logger.getLogger(CFD_1_Java.class.getName()).log(Level.SEVERE, null, ex);
-//                }
-
                 }
 
+                //increment of the time step
                 currentTimeStepNode = currentTimeStepNode.next;
                 currentTimeStepNode.prev.prev = null;
                 currentTimeStep++;
 
             }
 
+            //final output file
             PrintStream fout = new PrintStream(new File("plot_data_pr3_final_java.csv"));
             fout.println("cycleNumber, x, Tf, Ts , Tf* , Ts*,status, sigma, d, u_f, Re, Pr, Nu_fs, hv, hv_f, hv_s, alpha_f, alpha_s,ex_d_out,ex_d_in,ex_c_out,ex_c_in, eta, Q_charged, Q_discharged,Q_max,capacity_factor");
 
@@ -414,7 +410,7 @@ public class CFD_1_Java {
                 fout.print(ex_d_in + ",");
                 fout.print(ex_c_out + ",");
                 fout.print(ex_c_in + ",");
-                fout.print((eta.size()==0?0:eta.get(eta.size()-1)) + ",");
+                fout.print((eta.size() == 0 ? 0 : eta.get(eta.size() - 1)) + ",");
                 fout.print(Q_charged + ",");
                 fout.print(Q_discharged + ",");
                 fout.print(Q_max + ",");
@@ -427,11 +423,14 @@ public class CFD_1_Java {
 
     }
 
+    //returns int representing the current state beased on the current time t
     private static int getCurrentState(ArrayList<Double> stateCycle, double t) {
 
         int numOfStates = stateCycle.size();
+        //hard coded total time per cycle for the design study, which equalls to 24h
         double totalTimePerCycle = 86400;
         int returnState = CHARGING;
+        //if not hard coded, then must use the following:
 //        for (int i = 0; i < numOfStates; i++) {
 //            totalTimePerCycle += stateCycle.get(i);
 //        }
@@ -441,10 +440,10 @@ public class CFD_1_Java {
             returnState = i;
         }
 
-//         System.out.println("getCurrentState" + returnState);
         return returnState;
     }
 
+    //updates all the parameters based on the current status
     private static void updateParameters(int status) {
         double area = epsilon * Math.PI * diameter * diameter / 4.;
         uf_charging = m_f_dot / (area * rho_f);
